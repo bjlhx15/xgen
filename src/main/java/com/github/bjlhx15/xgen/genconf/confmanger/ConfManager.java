@@ -6,76 +6,63 @@ import com.github.bjlhx15.xgen.genconf.vo.GenConfModel;
 import com.github.bjlhx15.xgen.genconf.vo.ModuleConfModel;
 import com.github.bjlhx15.xgen.genconf.vo.NeedGenModel;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 
+public class ConfManager {
 
-public class ConfManager
-{
-  private static ConfManager manager = null;
+    private static ConfManager manager = null;
+    private GenConfModel genConf;
+    private Map mapModuleConf;
 
-  private ConfManager(GenConfImplementor provider) { readConf(provider); }
-
-
-  public static ConfManager getInstance(GenConfImplementor provider) {
-    if (manager == null) {
-      manager = new ConfManager(provider);
-    }
-    return manager;
-  }
-
-  private GenConfModel genConf = new GenConfModel();
-  private Map<String, ModuleConfModel> mapModuleConf = new HashMap();
-
-
-
-  public GenConfModel getGenConf() { return this.genConf; }
-
-
-
-  public Map<String, ModuleConfModel> getMapModuleConf() { return this.mapModuleConf; }
-
-
-
-
-
-  private void readConf(GenConfImplementor provider) {
-    readGenConf(provider);
-    for (NeedGenModel ngm : this.genConf.getNeedGens()) {
-      readOneModuleGenConf(ngm);
-    }
-  }
-
-  private void readOneModuleGenConf(NeedGenModel ngm) {
-    ModuleConfModel mcm = new ModuleConfModel();
-
-    String providerClassName = (String)this.genConf.getThemeById(ngm.getTheme()).getMapProviders().get(ngm.getProvider());
-
-    ModuleGenConfImplementor userGenConfImpl = null;
-
-    try {
-      userGenConfImpl = (ModuleGenConfImplementor)Class.forName(providerClassName).newInstance();
-    } catch (Exception err) {
-      err.printStackTrace();
+    private ConfManager(GenConfImplementor provider) {
+        genConf = new GenConfModel();
+        mapModuleConf = new HashMap();
+        readConf(provider);
     }
 
-    mcm = userGenConfImpl.getBaseModuleConfModel(ngm.getMapParams());
-    mcm.setUseTheme(ngm.getTheme());
+    public static ConfManager getInstance(GenConfImplementor provider) {
+        if (manager == null)
+            manager = new ConfManager(provider);
+        return manager;
+    }
 
-    mcm.setMapNeedGendTypes(userGenConfImpl.getMapNeedGenTypes(ngm.getMapParams()));
+    public GenConfModel getGenConf() {
+        return genConf;
+    }
 
+    public Map getMapModuleConf() {
+        return mapModuleConf;
+    }
 
-    mcm.setMapExtends(userGenConfImpl.getMapExtends(this.genConf, ngm.getMapParams()));
+    private void readConf(GenConfImplementor provider) {
+        readGenConf(provider);
+        NeedGenModel ngm;
+        for (Iterator iterator = genConf.getNeedGens().iterator(); iterator.hasNext(); readOneModuleGenConf(ngm))
+            ngm = (NeedGenModel) iterator.next();
 
+    }
 
-    this.mapModuleConf.put(mcm.getModuleId(), mcm);
-  }
+    private void readOneModuleGenConf(NeedGenModel ngm) {
+        ModuleConfModel mcm = new ModuleConfModel();
+        String providerClassName = (String) genConf.getThemeById(ngm.getTheme()).getMapProviders().get(ngm.getProvider());
+        ModuleGenConfImplementor userGenConfImpl = null;
+        try {
+            userGenConfImpl = (ModuleGenConfImplementor) Class.forName(providerClassName).newInstance();
+        } catch (Exception err) {
+            err.printStackTrace();
+        }
+        mcm = userGenConfImpl.getBaseModuleConfModel(ngm.getMapParams());
+        mcm.setUseTheme(ngm.getTheme());
+        mcm.setMapNeedGendTypes(userGenConfImpl.getMapNeedGenTypes(ngm.getMapParams()));
+        mcm.setMapExtends(userGenConfImpl.getMapExtends(genConf, ngm.getMapParams()));
+        mapModuleConf.put(mcm.getModuleId(), mcm);
+    }
 
+    private void readGenConf(GenConfImplementor provider) {
+        genConf.setNeedGens(provider.getNeedGens());
+        genConf.setThemes(provider.getThemes());
+        genConf.setMapConstants(provider.getMapConstants());
+    }
 
-  private void readGenConf(GenConfImplementor provider) {
-    this.genConf.setNeedGens(provider.getNeedGens());
-    this.genConf.setThemes(provider.getThemes());
-    this.genConf.setMapConstants(provider.getMapConstants());
-  }
 }
